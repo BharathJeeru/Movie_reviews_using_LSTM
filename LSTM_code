@@ -1,0 +1,88 @@
+// Input: Movie reviews (text), Labels (positive/negative)
+// Output: Sentiment prediction (0 or 1)
+
+// 1. Data Preprocessing
+function preprocess_data(reviews, labels):
+    // Tokenize reviews
+    tokenized_reviews = tokenize(reviews)
+    
+    // Convert words to indices (using pre-trained embeddings or vocabulary)
+    word_index = build_vocabulary(tokenized_reviews, max_words=5000)
+    sequences = convert_to_sequences(tokenized_reviews, word_index)
+    
+    // Pad sequences to fixed length
+    padded_sequences = pad_sequences(sequences, maxlen=200)
+    
+    // Split data into train and test sets
+    X_train, X_test, y_train, y_test = split_data(padded_sequences, labels, test_size=0.2)
+    
+    return X_train, X_test, y_train, y_test, word_index
+
+// 2. Build LSTM Model
+function build_lstm_model(vocab_size, embedding_dim=100, maxlen=200):
+    model = Sequential()
+    
+    // Embedding layer (optionally use pre-trained embeddings like GloVe)
+    model.add(Embedding(input_dim=vocab_size, output_dim=embedding_dim, input_length=maxlen))
+    
+    // LSTM layer
+    model.add(LSTM(units=128, dropout=0.2, recurrent_dropout=0.2))
+    
+    // Fully connected layer
+    model.add(Dense(units=64, activation='relu'))
+    
+    // Output layer (binary classification)
+    model.add(Dense(units=1, activation='sigmoid'))
+    
+    // Compile model
+    model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+    
+    return model
+
+// 3. Train Model
+function train_model(model, X_train, y_train, X_test, y_test):
+    // Define hyperparameters
+    epochs = 10
+    batch_size = 32
+    
+    // Train the model
+    model.fit(X_train, y_train, epochs=epochs, batch_size=batch_size, 
+              validation_data=(X_test, y_test))
+    
+    return model
+
+// 4. Evaluate Model
+function evaluate_model(model, X_test, y_test):
+    loss, accuracy = model.evaluate(X_test, y_test)
+    print("Test Accuracy:", accuracy)
+    
+    // Predict on test data
+    predictions = model.predict(X_test)
+    return predictions
+
+// 5. Main Workflow
+function main():
+    // Load dataset (e.g., IMDB dataset)
+    reviews, labels = load_dataset()
+    
+    // Preprocess data
+    X_train, X_test, y_train, y_test, word_index = preprocess_data(reviews, labels)
+    
+    // Build model
+    vocab_size = len(word_index) + 1
+    model = build_lstm_model(vocab_size)
+    
+    // Train model
+    trained_model = train_model(model, X_train, y_train, X_test, y_test)
+    
+    // Evaluate model
+    predictions = evaluate_model(trained_model, X_test, y_test)
+    
+    // Optional: Predict sentiment for new review
+    new_review = "This movie was amazing!"
+    preprocessed_review = preprocess_new_review(new_review, word_index)
+    prediction = trained_model.predict(preprocessed_review)
+    print("Sentiment:", "Positive" if prediction > 0.5 else "Negative")
+
+// Execute
+main()
